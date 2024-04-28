@@ -16,12 +16,12 @@ Art_GAN.py is our main python file.
 Ignore test.py and Images folder.
 
 
-# Notes in Art_GAN.py
+## Notes in Art_GAN.py
  - ensure all imported libraries are installed.
  - ensure path is properly set in lines 392,393
  - If you want to test model training, uncomment line 420, save it with a new name in lines 425,426, load it using the same names in lines 430.
  - make sure image_dir and save_dir are properly set in lines 435,436
 
-# How to run ?
+## How to run ?
 (Python version 3.11.5 was used, although earlier versions (unless it's not python2) should work well)
 in your terminal, just run "python Art_GAN.py" or "python3 Art_GAN.py"
