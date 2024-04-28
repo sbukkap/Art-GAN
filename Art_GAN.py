@@ -277,7 +277,7 @@ class PerceptualLoss(nn.Module):
         loss = F.l1_loss(output_features, target_features)
         return loss
 
-
+# we tried staged training but it didnt work out very well.
 # def train_stage(generator, discriminator, dataloader, epochs, optimizer_G, optimizer_D, criterion_GAN, criterion_MSE, stage):
 #     for epoch in range(epochs):
 #         for i, (defect_images, masks, real_images, sketches) in enumerate(dataloader):
@@ -416,312 +416,129 @@ num_epochs = 100
 optimizer_G = optim.Adam(generator.parameters(), lr=0.0002, betas=(0.5, 0.999))
 optimizer_D = optim.Adam(discriminator.parameters(), lr=0.0002, betas=(0.5, 0.999))
 
-train(generator, discriminator, dataloader, num_epochs, optimizer_G, optimizer_D, 1.0, 0.1, 0.01)
 
+# Uncomment below to train the model.
+# train(generator, discriminator, dataloader, num_epochs, optimizer_G, optimizer_D, 1.0, 0.1, 0.01)
 
-
-# TRAINING ------------------------------------------------
-
-# staged_training(generator, discriminator, dataloader, num_epochs, optimizer_G, optimizer_D, criterion_GAN, criterion_MSE)
 
 # Save the models
 # torch.save(generator.state_dict(), f'{PATH}generator.pth')
 # torch.save(discriminator.state_dict(), f'{PATH}discriminator.pth')
 
 # # Load the generator model
-# generator = Generator()
-# generator.load_state_dict(torch.load('./generator.pth', map_location=torch.device('cpu')))
-# generator.eval()  # Set the model to evaluation mode
+generator = Generator()
+generator.load_state_dict(torch.load('./generator.pth', map_location=torch.device('cpu')))
+generator.eval()  # Set the model to evaluation mode
 
-# # Assuming the device is properly set
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# # Assuming the dataset and dataloader are properly defined
-# # Assuming the image_transform is the same as used during training
-# image_dir = f'{PATH}ArtDataset/test_images'
-# save_dir = "./ArtDataset/testRes"
-# os.makedirs(save_dir, exist_ok=True)
+image_dir = f'{PATH}ArtDataset/test_images'
+save_dir = "./ArtDataset/testRes"
+os.makedirs(save_dir, exist_ok=True)
 
 
-# image_transform = transforms.Compose([
-#     transforms.ToTensor(),
-#     transforms.Normalize(mean=[0.6137, 0.5450, 0.4393], std=[0.2425, 0.2519, 0.2569])
-# ])
-# art_dataset = ArtDataset(image_dir, image_transform=image_transform, train=False)
-# dataloader = DataLoader(art_dataset, batch_size=16, shuffle=True)
+image_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.6137, 0.5450, 0.4393], std=[0.2425, 0.2519, 0.2569])
+])
+art_dataset = ArtDataset(image_dir, image_transform=image_transform, train=False)
+dataloader = DataLoader(art_dataset, batch_size=16, shuffle=True)
 
 # # Generate some masked and completed images
-# data_iter = iter(dataloader)
-# masked_images, masks, real_images, sketches = next(data_iter)
-# masked_images = masked_images.to(device)
-# completed_images, _ = generator(masked_images)
+data_iter = iter(dataloader)
+masked_images, masks, real_images, sketches = next(data_iter)
+masked_images = masked_images.to(device)
+completed_images, _ = generator(masked_images)
 
 # # Move tensors to CPU and convert to numpy for visualization
-# masked_images = masked_images.cpu().detach()
-# real_images = real_images.cpu().detach()
-# completed_images = completed_images.cpu().detach()
-# sketches = sketches.cpu().detach()
+masked_images = masked_images.cpu().detach()
+real_images = real_images.cpu().detach()
+completed_images = completed_images.cpu().detach()
+sketches = sketches.cpu().detach()
 
 # # Define the denormalization transform
-# def denormalize(tensors):
-#     means = np.array([0.6137, 0.5450, 0.4393])
-#     stds = np.array([0.2425, 0.2519, 0.2569])
-#     means = means.reshape((1, 3, 1, 1))
-#     stds = stds.reshape((1, 3, 1, 1))
-#     tensors = tensors * torch.tensor(stds) + torch.tensor(means)
-#     return tensors.clamp(0, 1)  # Clamp to the range [0, 1]
+def denormalize(tensors):
+    means = np.array([0.6137, 0.5450, 0.4393])
+    stds = np.array([0.2425, 0.2519, 0.2569])
+    means = means.reshape((1, 3, 1, 1))
+    stds = stds.reshape((1, 3, 1, 1))
+    tensors = tensors * torch.tensor(stds) + torch.tensor(means)
+    return tensors.clamp(0, 1)  # Clamp to the range [0, 1]
 
 # # Denormalize images
-# masked_images = denormalize(masked_images)
-# completed_images = denormalize(completed_images)
-# real_images = denormalize(real_images)
-# sketches = denormalize(sketches)
+masked_images = denormalize(masked_images)
+completed_images = denormalize(completed_images)
+real_images = denormalize(real_images)
+sketches = denormalize(sketches)
 
 # # Convert tensors to numpy arrays for plotting
-# masked_images = masked_images.numpy().transpose((0, 2, 3, 1))
-# completed_images = completed_images.numpy().transpose((0, 2, 3, 1))
-# real_images = real_images.numpy().transpose((0,2,3,1))
-# sketches = sketches.numpy().transpose((0,2,3,1))
+masked_images = masked_images.numpy().transpose((0, 2, 3, 1))
+completed_images = completed_images.numpy().transpose((0, 2, 3, 1))
+real_images = real_images.numpy().transpose((0,2,3,1))
+sketches = sketches.numpy().transpose((0,2,3,1))
 
 # # Plot the images
-# num_images = 2  # Number of images to display
-# fig, axes = plt.subplots(num_images, 4, figsize=(15, 25))
+num_images = 2  # Number of images to display
+fig, axes = plt.subplots(num_images, 4, figsize=(15, 25))
 
 # # Set headings for each column
-# axes[0, 0].set_title('Masked Image', fontsize=12)
-# axes[0, 1].set_title('Sketch', fontsize=12)
-# axes[0, 2].set_title('Completed Image', fontsize=12)
-# axes[0, 3].set_title('Real Image', fontsize=12)
+axes[0, 0].set_title('Masked Image', fontsize=12)
+axes[0, 1].set_title('Sketch', fontsize=12)
+axes[0, 2].set_title('Completed Image', fontsize=12)
+axes[0, 3].set_title('Real Image', fontsize=12)
 
-# for i in range(num_images):
-#     # Display masked image
-#     axes[i, 0].imshow(masked_images[i])
-#     axes[i, 0].axis('off')
+for i in range(num_images):
+    # Display masked image
+    axes[i, 0].imshow(masked_images[i])
+    axes[i, 0].axis('off')
 
-#     # Display sketch
-#     axes[i, 1].imshow(sketches[i])
-#     axes[i, 1].axis('off')
+    # Display sketch
+    axes[i, 1].imshow(sketches[i])
+    axes[i, 1].axis('off')
 
-#     # Display completed image
-#     axes[i, 2].imshow(completed_images[i])
-#     axes[i, 2].axis('off')
+    # Display completed image
+    axes[i, 2].imshow(completed_images[i])
+    axes[i, 2].axis('off')
 
-#     # Display real image
-#     axes[i, 3].imshow(real_images[i])
-#     axes[i, 3].axis('off')
+    # Display real image
+    axes[i, 3].imshow(real_images[i])
+    axes[i, 3].axis('off')
 
-# plt.tight_layout(pad=3.0)
-# plt.show()
+plt.tight_layout(pad=3.0)
+plt.show()
 
-# import cv2
-# from skimage.metrics import peak_signal_noise_ratio as psnr
-# from skimage.metrics import structural_similarity as ssim
+# fetch psnr, ssim and mse vals for single batch
 
-# # Assuming real_images and completed_images are numpy arrays containing the ground truth and generated images respectively
+import cv2
+from skimage.metrics import peak_signal_noise_ratio as psnr
+from skimage.metrics import structural_similarity as ssim
 
-# psnr_scores = []
-# ssim_scores = []
+# Assuming real_images and completed_images are numpy arrays containing the ground truth and generated images respectively
 
-# mse_loss = np.mean((real_images - completed_images) ** 2)
+psnr_scores = []
+ssim_scores = []
 
-# print(len(real_images), len(completed_images))
-# for i in range(len(real_images)):
-#     # Convert images to uint8 format (required by PSNR and SSIM functions)
-#     real_image_uint8 = (real_images[i] * 255).astype('uint8')
-#     completed_image_uint8 = (completed_images[i] * 255).astype('uint8')
+mse_loss = np.mean((real_images - completed_images) ** 2)
 
-#     # Calculate PSNR
-#     psnr_score = psnr(real_image_uint8, completed_image_uint8)
+for i in range(len(real_images)):
+    # Convert images to uint8 format (required by PSNR and SSIM functions)
+    real_image_uint8 = (real_images[i] * 255).astype('uint8')
+    completed_image_uint8 = (completed_images[i] * 255).astype('uint8')
 
-#     # Calculate SSIM with an explicit window size
-#     window_size = 3 # You can adjust this value as needed
-#     ssim_score = ssim(real_image_uint8, completed_image_uint8, win_size=window_size, multichannel=True)
+    # Calculate PSNR
+    psnr_score = psnr(real_image_uint8, completed_image_uint8)
 
-#     psnr_scores.append(psnr_score)
-#     ssim_scores.append(ssim_score)
+    # Calculate SSIM with an explicit window size
+    window_size = 3 # You can adjust this value as needed
+    ssim_score = ssim(real_image_uint8, completed_image_uint8, win_size=window_size, multichannel=True)
 
-# # Compute average PSNR and SSIM scores
-# average_psnr = sum(psnr_scores) / len(psnr_scores)
-# average_ssim = sum(ssim_scores) / len(ssim_scores)
+    psnr_scores.append(psnr_score)
+    ssim_scores.append(ssim_score)
 
-# print("Average MSE:", mse_loss)
-# print("Average PSNR:", average_psnr)
-# print("Average SSIM:", average_ssim)
+# Compute average PSNR and SSIM scores
+average_psnr = sum(psnr_scores) / len(psnr_scores)
+average_ssim = sum(ssim_scores) / len(ssim_scores)
 
-
-
-
-
-# # Load one sample from the dataloader
-# defect_image, mask, real_image, sketch = next(iter(dataloader))
-
-# # Move data to the device
-# defect_image = defect_image.to(device)
-
-# # Generate an image using the generator
-# with torch.no_grad():
-#     generated_image, _ = generator(defect_image)
-
-# # Convert tensors to PIL images
-# defect_image_pil = transforms.ToPILImage()(defect_image.cpu().squeeze())
-# real_image_pil = transforms.ToPILImage()(real_image.cpu().squeeze())
-
-# # Convert generated image tensor to numpy array and remove normalization
-# generated_image_np = generated_image.cpu().squeeze().permute(1, 2, 0).numpy()
-# generated_image_np = (generated_image_np * 0.5) + 0.5  # De-normalize the generated image
-# generated_image_pil = Image.fromarray((generated_image_np * 255).astype('uint8'))  # Convert numpy array back to PIL Image
-
-# # Plot the images
-# plt.figure(figsize=(15, 5))
-
-# plt.subplot(1, 3, 1)
-# plt.title('Masked Image')
-# plt.imshow(defect_image_pil)
-# plt.axis('off')
-
-# plt.subplot(1, 3, 2)
-# plt.title('Generated Image')
-# plt.imshow(generated_image_pil)
-# plt.axis('off')
-
-# plt.subplot(1, 3, 3)
-# plt.title('Ground Truth Image')
-# plt.imshow(real_image_pil)
-# plt.axis('off')
-
-# plt.tight_layout()
-# plt.show()
-
-# image_dir = './ArtDataset/train_images'
-# # Set up the dataloader, models, and training
-# image_transform = transforms.Compose([
-#     transforms.ToTensor(),
-#     transforms.Normalize(mean=[0.6137, 0.5450, 0.4393], std=[0.2425, 0.2519, 0.2569])
-# ])
-
-# art_dataset = ArtDataset(image_dir, image_transform=image_transform)
-
-# # Save art_dataset locally
-# with open('./art_dataset.pkl', 'wb') as f:
-#     pickle.dump(art_dataset, f)
-
-# dataloader = DataLoader(art_dataset, batch_size=16, shuffle=True)
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# generator = Generator().to(device)
-# discriminator = Discriminator().to(device)
-
-# criterion_GAN = nn.BCELoss().to(device)
-# criterion_MSE = nn.MSELoss().to(device)
-
-# optimizer_G = optim.Adam(generator.parameters(), lr=0.0001)
-# optimizer_D = optim.Adam(discriminator.parameters(), lr=0.0001)
-
-# staged_training(generator, discriminator, dataloader, optimizer_G, optimizer_D, criterion_GAN, criterion_MSE)
-# torch.save(generator.state_dict(), './generator.pth')
-# torch.save(discriminator.state_dict(), './discriminator.pth')
-
-# # Function to denormalize images
-# def denormalize(tensor):
-#     tensor = tensor.clone()  # Avoid modifying tensor in-place
-#     mean = [0.485, 0.456, 0.406]
-#     std = [0.229, 0.224, 0.225]
-#     for t, m, s in zip(tensor, mean, std):
-#         t.mul_(s).add_(m)  # Reverse the normalization
-#     return tensor
-
-# # Fetch one batch of data
-# data_iter = iter(dataloader)
-# defect_images, masks, real_images, sketches = next(data_iter)
-
-# # Forward pass through the generator
-# line_images, completed_images = generator(defect_images)
-
-# # Convert images to the appropriate format for visualization
-# defect_images = defect_images.cpu()
-# masks = masks.cpu()
-# real_images = real_images.cpu()
-# line_images = line_images.cpu()
-# completed_images = completed_images.cpu()
-
-# # Plotting
-# fig, axs = plt.subplots(4, 4, figsize=(15, 10))  # Adjust the subplot grid as needed
-
-# for i in range(4):
-#     # Show masked images
-#     masked_img = (defect_images[i] * masks[i]).permute(1, 2, 0)
-#     axs[0, i].imshow(masked_img)
-#     axs[0, i].axis('off')
-#     axs[0, i].set_title('Masked Image')
-
-#     # Show line images from generator
-#     line_img = line_images[i].squeeze(0)
-#     axs[1, i].imshow(line_img, cmap='gray')
-#     axs[1, i].axis('off')
-#     axs[1, i].set_title('Line Image')
-
-#     # Show completed images from generator
-#     completed_img = denormalize(completed_images[i]).permute(1, 2, 0)
-#     axs[2, i].imshow(completed_img)
-#     axs[2, i].axis('off')
-#     axs[2, i].set_title('Completed Image')
-
-#     # Show original images (ground truth)
-#     real_img = denormalize(real_images[i]).permute(1, 2, 0)
-#     axs[3, i].imshow(real_img)
-#     axs[3, i].axis('off')
-#     axs[3, i].set_title('Original Image')
-
-# plt.show()
-
-# line_images, completed_images = generator(defect_images)
-
-# # Generate some masked and completed images
-# data_iter = iter(dataloader)
-# masked_images, masks, real_images, sketches = next(data_iter)
-# masked_images = masked_images.to(device)
-# completed_images, _ = generator(masked_images)
-
-# # Convert tensors to numpy arrays and denormalize
-# masked_images = masked_images.cpu().detach().numpy()
-# completed_images = completed_images.cpu().detach().numpy()
-
-# # Denormalize images
-# masked_images = np.transpose(masked_images, (0, 2, 3, 1))  # Change from (N, C, H, W) to (N, H, W, C)
-# completed_images = np.transpose(completed_images, (0, 2, 3, 1))
-
-# # Plot the images
-# num_images = 5  # Number of images to display
-# fig, axes = plt.subplots(num_images, 2, figsize=(10, 20))
-
-# for i in range(num_images):
-#     # Display masked image
-#     axes[i, 0].imshow(masked_images[i])
-#     axes[i, 0].set_title('Masked Image')
-#     axes[i, 0].axis('off')
-
-#     # Display completed image
-#     axes[i, 1].imshow(completed_images[i])
-#     axes[i, 1].set_title('Completed Image')
-#     axes[i, 1].axis('off')
-
-# plt.tight_layout()
-# plt.show()
-
-# def denormalize(tensor):
-#     mean = [0.6137, 0.5450, 0.4393]
-#     std = [0.2425, 0.2519, 0.2569]
-#     for i in range(3):
-#         tensor[i] = tensor[i] * std[i] + mean[i]
-#     return tensor
-
-# # Fetch one batch of data
-# data_iter = iter(dataloader)
-# defect_images, masks, real_images, sketches = next(data_iter)
-
-# # Convert images to the appropriate format for visualization
-# defect_images = defect_images.cpu()
-# masks = masks.cpu()
-# real_images = real_images.cpu()
-# line_images = line_images.cpu()
-# completed_images = completed_images.cpu()
+print("Average MSE:", mse_loss)
+print("Average PSNR:", average_psnr)
+print("Average SSIM:", average_ssim)
